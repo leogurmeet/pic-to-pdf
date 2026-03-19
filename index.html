@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#e4dcd0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pic to PDF">
+<title>Pic to PDF</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --page-bg: #e4dcd0;
+  --card-bg: #faf6f1;
+  --input-bg: #f3ebe0;
+  --btn-bg: #d6c8b4;
+  --text: #3a2010;
+  --text-mid: #6b3f1f;
+  --text-muted: #9a7040;
+  --border: rgba(100,70,30,0.20);
+  --border-mid: rgba(100,70,30,0.32);
+  --accent-navy: #1a3177;
+  --accent-red: #dc2626;
+  --success: #5a7c40;
+  --error: #b05a3a;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --radius-xs: 10px;
+  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: linear-gradient(160deg, #ede8df 0%, #e4dcd0 45%, #dbd2c6 100%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  padding: 0 12px;
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ── Brand Row ── */
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xs);
+  background: var(--btn-bg);
+  border: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.brand-icon .icon-top { font-family: var(--font-sans); font-size: 10px; font-weight: 700; color: var(--text); line-height: 1; }
+.brand-icon .icon-bot { font-family: var(--font-sans); font-size: 7px; font-weight: 400; color: var(--text-mid); line-height: 1.2; }
+
+.brand-text-wrap { display: flex; flex-direction: column; }
+.brand-name { font-family: var(--font-sans); font-size: 17px; color: var(--text); line-height: 1.15; }
+.brand-name strong { font-weight: 700; }
+.brand-name span { font-weight: 400; }
+.brand-sub { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+.header-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+}
+.header-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+/* ── Nav Tabs ── */
+.nav-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 9px 4px;
+  border-radius: var(--radius-xs);
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  min-height: 44px;
+}
+.tab-btn.active {
+  background: var(--btn-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* ── Main Card ── */
+.card {
+  background: var(--card-bg);
+  border-radius: 26px;
+  padding: 20px 18px 18px;
+  box-shadow: 0 2px 0 rgba(255,255,255,0.75) inset, 0 10px 40px rgba(140,104,68,0.12);
+  margin-bottom: 14px;
+}
+
+/* ── Screen transitions ── */
+.screen {
+  display: none;
+  animation: fadeUp 0.25s ease;
+}
+.screen.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Field Label ── */
+.field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+
+/* ── Select / Input ── */
+select, input[type="text"] {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color 0.18s;
+  min-height: 44px;
+}
+select:focus, input[type="text"]:focus { border-color: var(--border-mid); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a7040' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+
+/* ── Buttons ── */
+.leo-btn {
+  width: 100%;
+  background: var(--btn-bg);
+  border: none;
+  border-radius: 14px;
+  padding: 13px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  min-height: 44px;
+  transition: transform 0.1s, opacity 0.1s;
+}
+.leo-btn:active { transform: scale(0.98); opacity: 0.88; }
+
+.leo-btn-outline {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-mid);
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.15s;
+}
+.leo-btn-outline:active { background: var(--input-bg); }
+.leo-btn-outline.danger { color: var(--error); border-color: rgba(176,90,58,0.28); }
+
+.btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn-row .leo-btn-outline { margin-bottom: 0; }
+
+/* ── Section divider ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.divider-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  white-space: nowrap;
+}
+
+/* ── Image picker area ── */
+.pick-zone {
+  border: 2px dashed var(--border-mid);
+  border-radius: var(--radius);
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+  margin-bottom: 14px;
+  min-height: 44px;
+}
+.pick-zone:active { background: var(--input-bg); }
+.pick-zone-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--btn-bg);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+}
+.pick-zone-icon svg { width: 24px; height: 24px; stroke: var(--text-mid); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pick-zone-title { font-family: var(--font-sans); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.pick-zone-sub { font-size: 12px; color: var(--text-muted); }
+
+/* ── Image grid ── */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.img-thumb {
+  aspect-ratio: 1;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  position: relative;
+  border: 1.5px solid var(--border);
+  cursor: grab;
+}
+.img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.img-thumb .remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(58,32,16,0.72);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.img-thumb .remove-btn svg { width: 10px; height: 10px; stroke: #faf6f1; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.img-thumb .page-num {
+  position: absolute;
+  bottom: 4px;
+  left: 5px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #faf6f1;
+  background: rgba(58,32,16,0.60);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+/* ── Count badge ── */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-mid);
+  margin-bottom: 14px;
+}
+.count-badge strong { color: var(--accent-navy); font-weight: 700; }
+
+/* ── Toggle Row ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+.toggle-label { font-size: 14px; color: var(--text); font-family: var(--font-mono); }
+.toggle-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--btn-bg);
+  border: 1.5px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle-switch.on { background: var(--text-mid); }
+.toggle-switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #faf6f1;
+  transition: left 0.2s ease;
+}
+.toggle-switch.on .knob { left: 18px; }
+
+/* ── Settings section ── */
+.settings-group { margin-bottom: 14px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 20px 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Progress bar ── */
+.progress-wrap {
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.progress-bar {
+  height: 6px;
+  background: var(--accent-navy);
+  border-radius: 8px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--card-bg);
+  border: 1.5px solid var(--border-mid);
+  padding: 11px 20px;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  white-space: nowrap;
+  z-index: 999;
+  max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { color: var(--success); }
+.toast.error { color: var(--error); }
+
+/* ── Bottom Sheet Modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(58,32,16,0.35);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.overlay.show { display: flex; }
+.bottom-sheet {
+  background: var(--card-bg);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 430px;
+  padding: 20px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  animation: sheetUp 0.32s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.sheet-handle {
+  width: 32px;
+  height: 4px;
+  background: var(--border-mid);
+  border-radius: 2px;
+  margin: 0 auto 18px;
+}
+.sheet-title { font-family: var(--font-sans); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+
+/* ── PDF options detail ── */
+.option-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.option-chip {
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  border: 1.5px solid var(--border);
+  background: var(--input-bg);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.option-chip.selected {
+  background: var(--btn-bg);
+  border-color: var(--border-mid);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 14px 0;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* hidden inputs */
+#fileInput, #cameraInput { display: none; }
+
+/* drag-over highlight */
+.img-thumb.drag-over { opacity: 0.5; border-color: var(--accent-navy); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- Brand Row -->
+  <div class="brand-row">
+    <div class="brand-icon">
+      <span class="icon-top">PIC</span>
+      <span class="icon-bot">PDF</span>
+    </div>
+    <div class="brand-text-wrap">
+      <div class="brand-name"><strong>Pic</strong> <span>to PDF</span></div>
+      <div class="brand-sub">convert · arrange · export</div>
+    </div>
+    <div class="header-badge">
+      <span class="dot"></span>
+      <span>On-device</span>
+    </div>
+  </div>
+
+  <!-- Nav Tabs -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('images')">Images</button>
+    <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+  </div>
+
+  <!-- Main Card -->
+  <div class="card">
+
+    <!-- ── IMAGES SCREEN ── -->
+    <div class="screen active" id="screen-images">
+
+      <!-- Pick zone -->
+      <div class="pick-zone" onclick="showSourceSheet()">
+        <div class="pick-zone-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="pick-zone-title">Add Images</div>
+        <div class="pick-zone-sub">Camera · Gallery · Multiple at once</div>
+      </div>
+
+      <!-- Image count -->
+      <div class="count-badge" id="countBadge" style="display:none;">
+        <strong id="countNum">0</strong> images · drag to reorder
+      </div>
+
+      <!-- Image grid -->
+      <div class="image-grid" id="imageGrid"></div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">No images yet. Tap above to add.</div>
+
+      <div class="divider"><span class="divider-label">Export</span></div>
+
+      <button class="leo-btn" onclick="generatePDF()" id="generateBtn" disabled style="opacity:0.5;">Generate PDF</button>
+
+      <div class="progress-wrap" id="progressWrap" style="display:none;">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="leo-btn-outline danger" onclick="clearAll()">Clear All</button>
+        <button class="leo-btn-outline" onclick="switchTab('settings')">Options</button>
+      </div>
+
+    </div>
+
+    <!-- ── SETTINGS SCREEN ── -->
+    <div class="screen" id="screen-settings">
+
+      <div class="settings-group">
+        <label class="field-label">Page Size</label>
+        <div class="option-row" id="pageSizeOptions">
+          <div class="option-chip selected" data-val="a4" onclick="selectOption('pageSize', 'a4', this)">A4</div>
+          <div class="option-chip" data-val="letter" onclick="selectOption('pageSize', 'letter', this)">US Letter</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="field-label">Image Fit</label>
+        <div class="option-row" id="imageFitOptions">
+          <div class="option-chip selected" data-val="contain" onclick="selectOption('imageFit', 'contain', this)">Fit (letterbox)</div>
+          <div class="option-chip" data-val="fill" onclick="selectOption('imageFit', 'fill', this)">Fill (crop)</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="field-label">Page Margin</label>
+        <div class="option-row" id="marginOptions">
+          <div class="option-chip selected" data-val="none" onclick="selectOption('margin', 'none', this)">No margin</div>
+          <div class="option-chip" data-val="small" onclick="selectOption('margin', 'small', this)">Small (5mm)</div>
+          <div class="option-chip" data-val="medium" onclick="selectOption('margin', 'medium', this)">Medium (10mm)</div>
+          <div class="option-chip" data-val="large" onclick="selectOption('margin', 'large', this)">Large (20mm)</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="field-label">Page Orientation</label>
+        <div class="option-row" id="orientOptions">
+          <div class="option-chip selected" data-val="portrait" onclick="selectOption('orient', 'portrait', this)">Portrait</div>
+          <div class="option-chip" data-val="landscape" onclick="selectOption('orient', 'landscape', this)">Landscape</div>
+          <div class="option-chip" data-val="auto" onclick="selectOption('orient', 'auto', this)">Auto per image</div>
+        </div>
+      </div>
+
+      <div class="divider"><span class="divider-label">Output</span></div>
+
+      <div class="settings-group">
+        <label class="field-label">Filename</label>
+        <input type="text" id="filenameInput" value="pic-to-pdf" placeholder="output filename">
+      </div>
+
+      <div class="toggle-row">
+        <span class="toggle-label">One image per page</span>
+        <div class="toggle-switch on" id="onePerPageToggle" onclick="toggleSwitch('onePerPageToggle', 'onePerPage')"></div>
+      </div>
+
+      <button class="leo-btn" onclick="switchTab('images')">Back to Images</button>
+
+    </div>
+
+  </div><!-- /card -->
+
+  <footer>leogurmeet</footer>
+</div>
+
+<!-- Source Picker Sheet -->
+<div class="overlay" id="sourceOverlay" onclick="closeSourceSheet(event)">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Images</div>
+    <button class="leo-btn" onclick="triggerCamera()">
+      Take Photo (Camera)
+    </button>
+    <button class="leo-btn" onclick="triggerGallery()">
+      Choose from Gallery
+    </button>
+    <button class="leo-btn-outline" onclick="closeOverlay()">Cancel</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden inputs -->
+<input type="file" id="cameraInput" accept="image/*" capture="environment" multiple onchange="handleFiles(this.files)">
+<input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+
+<!-- jsPDF via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ── State ──
+const state = {
+  images: [],       // { id, dataUrl, w, h, name }
+  pageSize: 'a4',
+  imageFit: 'contain',
+  margin: 'none',
+  orient: 'portrait',
+  onePerPage: true,
+};
+let dragSrcIdx = null;
+
+// ── Tab switching ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById(`screen-${tab}`).classList.add('active');
+}
+
+// ── Source sheet ──
+function showSourceSheet() { document.getElementById('sourceOverlay').classList.add('show'); }
+function closeOverlay() { document.getElementById('sourceOverlay').classList.remove('show'); }
+function closeSourceSheet(e) { if (e.target === e.currentTarget) closeOverlay(); }
+function triggerCamera() { closeOverlay(); document.getElementById('cameraInput').click(); }
+function triggerGallery() { closeOverlay(); document.getElementById('fileInput').click(); }
+
+// ── File handling ──
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        state.images.push({ id: Date.now() + Math.random(), dataUrl: e.target.result, w: img.naturalWidth, h: img.naturalHeight, name: file.name });
+        renderGrid();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  // reset inputs so same file can be re-added
+  document.getElementById('fileInput').value = '';
+  document.getElementById('cameraInput').value = '';
+}
+
+// ── Render grid ──
+function renderGrid() {
+  const grid = document.getElementById('imageGrid');
+  const empty = document.getElementById('emptyState');
+  const badge = document.getElementById('countBadge');
+  const btn = document.getElementById('generateBtn');
+  const n = state.images.length;
+
+  empty.style.display = n === 0 ? 'block' : 'none';
+  badge.style.display = n === 0 ? 'none' : 'inline-flex';
+  document.getElementById('countNum').textContent = n;
+  btn.disabled = n === 0;
+  btn.style.opacity = n === 0 ? '0.5' : '1';
+
+  grid.innerHTML = '';
+  state.images.forEach((img, i) => {
+    const div = document.createElement('div');
+    div.className = 'img-thumb';
+    div.draggable = true;
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <img src="${img.dataUrl}" alt="page ${i+1}">
+      <button class="remove-btn" onclick="removeImage(${i})">
+        <svg viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
+      </button>
+      <span class="page-num">p.${i+1}</span>`;
+    div.addEventListener('dragstart', e => { dragSrcIdx = i; e.dataTransfer.effectAllowed = 'move'; });
+    div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => { e.preventDefault(); div.classList.remove('drag-over'); swapImages(dragSrcIdx, i); });
+    grid.appendChild(div);
+  });
+}
+
+function removeImage(idx) {
+  state.images.splice(idx, 1);
+  renderGrid();
+}
+
+function clearAll() {
+  if (state.images.length === 0) return;
+  state.images = [];
+  renderGrid();
+  showToast('Cleared', 'success');
+}
+
+function swapImages(a, b) {
+  if (a === b || a === null || b === null) return;
+  [state.images[a], state.images[b]] = [state.images[b], state.images[a]];
+  renderGrid();
+}
+
+// ── Settings ──
+function selectOption(key, val, el) {
+  state[key] = val;
+  el.closest('.option-row').querySelectorAll('.option-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function toggleSwitch(elemId, key) {
+  const sw = document.getElementById(elemId);
+  sw.classList.toggle('on');
+  state[key] = sw.classList.contains('on');
+}
+
+// ── Generate PDF ──
+async function generatePDF() {
+  if (state.images.length === 0) return;
+  const { jsPDF } = window.jspdf;
+
+  const filename = (document.getElementById('filenameInput').value.trim() || 'pic-to-pdf') + '.pdf';
+
+  // Page dimensions in mm
+  const pageSizes = {
+    a4:     { w: 210, h: 297 },
+    letter: { w: 215.9, h: 279.4 }
+  };
+  const marginMm = { none: 0, small: 5, medium: 10, large: 20 }[state.margin];
+
+  showProgress(0);
+
+  let doc = null;
+
+  for (let i = 0; i < state.images.length; i++) {
+    const img = state.images[i];
+    const imgRatio = img.w / img.h;
+
+    // Determine page orientation for this page
+    let orientation;
+    if (state.orient === 'auto') {
+      orientation = imgRatio >= 1 ? 'landscape' : 'portrait';
+    } else {
+      orientation = state.orient;
+    }
+
+    const base = pageSizes[state.pageSize];
+    const pgW = orientation === 'landscape' ? base.h : base.w;
+    const pgH = orientation === 'landscape' ? base.w : base.h;
+
+    if (i === 0) {
+      doc = new jsPDF({ orientation, unit: 'mm', format: state.pageSize === 'a4' ? 'a4' : 'letter' });
+    } else {
+      doc.addPage(state.pageSize === 'a4' ? 'a4' : 'letter', orientation);
+    }
+
+    // Drawable area
+    const dW = pgW - marginMm * 2;
+    const dH = pgH - marginMm * 2;
+    const drawRatio = dW / dH;
+
+    let drawW, drawH, drawX, drawY;
+
+    if (state.imageFit === 'contain') {
+      if (imgRatio > drawRatio) {
+        drawW = dW; drawH = dW / imgRatio;
+      } else {
+        drawH = dH; drawW = dH * imgRatio;
+      }
+      drawX = marginMm + (dW - drawW) / 2;
+      drawY = marginMm + (dH - drawH) / 2;
+    } else {
+      // fill: crop to drawable area
+      drawW = dW; drawH = dH;
+      drawX = marginMm; drawY = marginMm;
+    }
+
+    doc.addImage(img.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+    showProgress(Math.round(((i + 1) / state.images.length) * 100));
+    await new Promise(r => setTimeout(r, 20)); // yield for UI
+  }
+
+  doc.save(filename);
+  showProgress(100);
+  setTimeout(() => { document.getElementById('progressWrap').style.display = 'none'; }, 800);
+  showToast('PDF saved', 'success');
+}
+
+function showProgress(pct) {
+  const wrap = document.getElementById('progressWrap');
+  wrap.style.display = 'block';
+  requestAnimationFrame(() => { document.getElementById('progressBar').style.width = pct + '%'; });
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
